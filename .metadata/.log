@@ -1,0 +1,21 @@
+!SESSION 2024-08-28 13:10:56.869 -----------------------------------------------
+eclipse.buildId=Version 1.16.0
+java.version=17.0.11
+java.vendor=Eclipse Adoptium
+BootLoader constants: OS=linux, ARCH=x86_64, WS=gtk, NL=en_US
+Command-line arguments:  -os linux -ws gtk -arch x86_64
+
+!ENTRY com.st.stm32cube.ide.mcu.informationcenter 4 4 2024-08-28 13:11:31.019
+!MESSAGE CubeMX plugin appears to be active, Log4j initialization might be too late.
+
+!ENTRY com.st.stm32cube.ide.mcu.informationcenter 1 1 2024-08-28 13:11:31.021
+!MESSAGE Log4j2 initialized with config file /home/shubham-mishra/Documents/Github/Senior Project/.metadata/.log4j2.xml
+
+!ENTRY com.st.stm32cube.ide.mcu.ide 1 1 2024-08-28 13:11:33.766
+!MESSAGE Started RMI Server, listening on port 41337
+
+!ENTRY org.eclipse.cdt.core 1 0 2024-08-28 13:14:29.554
+!MESSAGE Indexed 'SpeeedECU_CM4' (29 sources, 90 headers) in 8.48 sec: 8,685 declarations; 66,580 references; 0 unresolved inclusions; 1 syntax errors; 2 unresolved names (0.0027%)
+
+!ENTRY org.eclipse.cdt.core 1 0 2024-08-28 13:14:35.203
+!MESSAGE Indexed 'SpeeedECU_CM7' (29 sources, 90 headers) in 5.64 sec: 8,780 declarations; 67,764 references; 0 unresolved inclusions; 1 syntax errors; 2 unresolved names (0.0026%)
