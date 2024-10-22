@@ -60,8 +60,8 @@ all: main-build
 main-build: default.elf secondary-outputs
 
 # Tool invocations
-default.elf default.map: $(OBJS) $(USER_OBJS) /home/shubham-mishra/Documents/Github/Senior\ Project/default/STM32F103C8TX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "default.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m3 -T"/home/shubham-mishra/Documents/Github/Senior Project/default/STM32F103C8TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="default.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+default.elf default.map: $(OBJS) $(USER_OBJS) C:\SJSU-Dev2\projects\SeniorProject\Senior_Project-SpeeedECU\default\STM32F103C8TX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "default.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m3 -T"C:\SJSU-Dev2\projects\SeniorProject\Senior_Project-SpeeedECU\default\STM32F103C8TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="default.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 

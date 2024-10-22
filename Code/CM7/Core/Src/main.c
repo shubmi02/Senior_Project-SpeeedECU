@@ -166,7 +166,7 @@ Error_Handler();
   while (1)
   {
 
-	  //printf("Welcome to STM32 world !\n\r");
+	  printf("Welcome to STM32 world !\n\r");
 
 //	  if (HAL_GPIO_ReadPin (GPIOC, GPIO_PIN_9)){
 //		  printf("Welcome to STM32 world !\n\r");
@@ -194,16 +194,16 @@ Error_Handler();
 
 
     /* -- Sample board code for User push-button in interrupt mode ---- */
-//    if (BspButtonState == BUTTON_PRESSED)
-//    {
-//      /* Update button state */
-//      BspButtonState = BUTTON_RELEASED;
-//      /* -- Sample board code to toggle leds ---- */
-//      BSP_LED_Toggle(LED_GREEN);
-//      BSP_LED_Toggle(LED_YELLOW);
-//      BSP_LED_Toggle(LED_RED);
-//      /* ..... Perform your action ..... */
-//    }
+    if (BspButtonState == BUTTON_PRESSED)
+    {
+      /* Update button state */
+      BspButtonState = BUTTON_RELEASED;
+      /* -- Sample board code to toggle leds ---- */
+      BSP_LED_Toggle(LED_GREEN);
+      BSP_LED_Toggle(LED_YELLOW);
+      BSP_LED_Toggle(LED_RED);
+      /* ..... Perform your action ..... */
+    }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
