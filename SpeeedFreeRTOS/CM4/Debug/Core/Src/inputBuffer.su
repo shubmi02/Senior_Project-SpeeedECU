@@ -1,0 +1,4 @@
+../Core/Src/inputBuffer.c:16:5:bufferPut	16	static
+../Core/Src/inputBuffer.c:27:5:bufferGet	16	static
+../Core/Src/inputBuffer.c:39:5:isBufferFull	4	static
+../Core/Src/inputBuffer.c:43:5:isBufferEmpty	4	static

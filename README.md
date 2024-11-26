@@ -55,10 +55,12 @@ Some of the problems existing with current ECUs for a formula style competition,
 <!-- ROADMAP -->
 ## Roadmap
 
-- [ ] Test Throttle Position Sensor with Nucleo Board (Finish by 9/1)
-- [ ] Determine Resistors required to create a linear slope for Throttle Percentages (Finish by 9/1)
-- [ ] Test Brake Pressure Sensor with Nucleo Board (Finish by 9/1)
-- [ ] Send PCB Revision A Board (Finish by 9/14)
+[x] Setup Test Bench with Motor and Motor Controller <br/>
+[x] Make Harness for CAN, Motor, and Motor Controller <br/>
+[x] Test MCU with ECU on CAN <br/>
+[] Create CAN messages for sending Throttle data over CAN
+[] 
+- [ ] 
 
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
