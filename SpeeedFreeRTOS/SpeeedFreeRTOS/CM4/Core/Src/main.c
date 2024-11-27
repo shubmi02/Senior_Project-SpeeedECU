@@ -84,13 +84,6 @@ const osThreadAttr_t sendCANTask_attributes = {
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityBelowNormal,
 };
-/* Definitions for canTestTask */
-osThreadId_t canTestTaskHandle;
-const osThreadAttr_t canTestTask_attributes = {
-  .name = "canTestTask",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
-};
 /* Definitions for txSemaphore */
 osSemaphoreId_t txSemaphoreHandle;
 const osSemaphoreAttr_t txSemaphore_attributes = {
@@ -115,7 +108,6 @@ void StartDefaultTask(void *argument);
 void startTxTask(void *argument);
 void startReadSensor(void *argument);
 void startSendCAN(void *argument);
-void startCanTest(void *argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -290,9 +282,6 @@ int main(void)
 
   /* creation of sendCANTask */
   sendCANTaskHandle = osThreadNew(startSendCAN, NULL, &sendCANTask_attributes);
-
-  /* creation of canTestTask */
-  canTestTaskHandle = osThreadNew(startCanTest, NULL, &canTestTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
 	/* add threads, ... */
@@ -714,8 +703,7 @@ void startTxTask(void *argument)
 	/* Infinite loop */
 	for (;;) {
 		ulTaskNotifyTake(pdTRUE, portMAX_DELAY); // Block until notified by another task (read sensor task)
-		TorqueEncoder *test = (TorqueEncoder*) pvPortMalloc(
-				sizeof(struct TorqueEncoder));	//testing only
+		TorqueEncoder *test = (TorqueEncoder*) pvPortMalloc(sizeof(struct TorqueEncoder));	//testing only
 		test->id = TORQUE_SENSOR;
 		test->valueFloat = 0;
 		test->valueInt = 0;
@@ -725,28 +713,17 @@ void startTxTask(void *argument)
 		test->travelPercent = 0;
 		test->valueBool = false;
 
-		if (osSemaphoreAcquire(readSensorSemaphoreHandle, osWaitForever)
-				!= osOK)
-			Error_Handler();	//acquire semaphore for buffer read
+		if (osSemaphoreAcquire(readSensorSemaphoreHandle, osWaitForever) != osOK) Error_Handler();	//acquire semaphore for buffer read
 
 		if (bufferGet(&bufferData)) //get data from buffer if not empty
-				{
+		{
 			test->valueInt = bufferData;
-			if (bufferGet(&bufferData))
-				test->sensor1 = bufferData;
-
-			if (osSemaphoreAcquire(txSemaphoreHandle, osWaitForever) != osOK)
-				Error_Handler(); //SYNC with receiving data task from C7 core
-
-			if (OPENAMP_send(&rp_endpoint, test, sizeof(struct TorqueEncoder))
-					< 0)
-				Error_Handler(); //Send data to m7 core
-
+			if (bufferGet(&bufferData)) test->sensor1 = bufferData;
+			if (osSemaphoreAcquire(txSemaphoreHandle, osWaitForever) != osOK) Error_Handler(); //SYNC with receiving data task from C7 core
+			if (OPENAMP_send(&rp_endpoint, test, sizeof(struct TorqueEncoder)) < 0) Error_Handler(); //Send data to m7 core
 			HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
 		}
-		if (osSemaphoreRelease(readSensorSemaphoreHandle) != osOK)
-			Error_Handler();	//free semaphore, done with buffer read
-
+		if (osSemaphoreRelease(readSensorSemaphoreHandle) != osOK) Error_Handler();	//free semaphore, done with buffer read
 		vPortFree(test);
 		osDelay(1);
 
@@ -764,27 +741,23 @@ void startTxTask(void *argument)
 void startReadSensor(void *argument)
 {
   /* USER CODE BEGIN startReadSensor */
-	uint32_t i = 0;
 	/* Infinite loop */
 	for (;;) {
-		ulTaskNotifyTake(pdTRUE, portMAX_DELAY);//blocks until notified, Used for testing (simulation)
+		HAL_ADC_Start(&hadc1);
+		HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
+		uint32_t sensor1 = HAL_ADC_GetValue(&hadc1);	//rename to more specific sensor
 
-		uint32_t *valueArray = parseCSV((char*) rx_buffer);	//TESTING ONLY READ 2 SENSOR VALUES AND BUT INTO BUFFER
-		for (i = 0; i < 2; i++) {
-			if (osSemaphoreAcquire(readSensorSemaphoreHandle, osWaitForever)
-					!= osOK)
-				Error_Handler();	//acquire semaphore for buffer write
-			bufferPut(valueArray[i]);	//read data and put into buffer
-			if (osSemaphoreRelease(readSensorSemaphoreHandle) != osOK)
-				Error_Handler();
-			osDelay(10);
-		}
+		HAL_ADC_Start(&hadc2);
+		HAL_ADC_PollForConversion(&hadc2, HAL_MAX_DELAY);
+		uint32_t sensor2 = HAL_ADC_GetValue(&hadc2);
+
+		if (osSemaphoreAcquire(readSensorSemaphoreHandle, osWaitForever) != osOK) Error_Handler();	//acquire semaphore for buffer write
+		bufferPut(sensor1);	//read data and put into buffer
+		bufferPut(sensor2);	//read data and put into buffer
+		if (osSemaphoreRelease(readSensorSemaphoreHandle) != osOK) Error_Handler();
+
 		xTaskNotifyGive(txTaskHandle); // Notify txTask to start
 
-		memset(rx_buffer, 0, sizeof(rx_buffer)); //free buffer for next data from uart
-		vPortFree(valueArray);
-
-		HAL_UARTEx_ReceiveToIdle_IT(&huart3, rx_buffer, sizeof(rx_buffer)); //get next data from uart
 		osDelay(1);
 	}
   /* USER CODE END startReadSensor */
@@ -801,6 +774,16 @@ void startSendCAN(void *argument)
 {
   /* USER CODE BEGIN startSendCAN */
 
+	uint32_t Notifications = FDCAN_IT_RX_FIFO0_NEW_MESSAGE;
+	if (HAL_FDCAN_Start(&hfdcan1) != HAL_OK) {
+		Error_Handler();
+	}
+
+	if (HAL_FDCAN_ActivateNotification(&hfdcan1, Notifications, 0) != HAL_OK) {
+		Error_Handler();
+	}
+	FDCAN_ProtocolStatusTypeDef protocolStatus;
+
 	/* Infinite loop */
 	for (;;) {
 		ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
@@ -810,133 +793,22 @@ void startSendCAN(void *argument)
 		float fracPart = test->travelPercent - intPart;
 		int decimals = 4;
 		int fracToInt = trunc(fracPart * pow(10, decimals));
-//	  sprintf(data, "%d.%04d\n", intPart,fracToInt);
-//	  HAL_UART_Transmit(&huart3,(uint8_t*)data, strlen(data), 100);
-//		HAL_ADC_Start(&hadc1);
-//		HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
-//		uint32_t raw = HAL_ADC_GetValue(&hadc1);
-//		sprintf(data, "ADC: %08" PRIx32, raw);
-//		HAL_UART_Transmit(&huart3, (uint8_t*) data, strlen(data), 200);
-		vPortFree(data);
-		osDelay(1);
-	}
-  /* USER CODE END startSendCAN */
-}
-
-/* USER CODE BEGIN Header_startCanTest */
-/**
- * @brief Function implementing the canTestTask thread.
- * @param argument: Not used
- * @retval None
- */
-/* USER CODE END Header_startCanTest */
-void startCanTest(void *argument)
-{
-  /* USER CODE BEGIN startCanTest */
-	/* Infinite loop */
-	uint32_t Notifications = FDCAN_IT_RX_FIFO0_NEW_MESSAGE;
-	if (HAL_FDCAN_Start(&hfdcan1) != HAL_OK) {
-		Error_Handler();
-	}
-
-	if (HAL_FDCAN_ActivateNotification(&hfdcan1, Notifications, 0) != HAL_OK) {
-		Error_Handler();
-	}
-
-//	txHeader.Identifier = 0xC0; //id of transmitter, from filters
-//	txHeader.IdType = FDCAN_STANDARD_ID;
-//	txHeader.TxFrameType = FDCAN_DATA_FRAME;
-//	txHeader.DataLength = FDCAN_DLC_BYTES_8; //only 8 byte of data send
-//	txHeader.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
-//	txHeader.BitRateSwitch = FDCAN_BRS_OFF;
-//	txHeader.FDFormat = FDCAN_CLASSIC_CAN; //normal CAN, not FDCAN
-//	txHeader.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
-//	txHeader.MessageMarker = 0;
-
-	FDCAN_ProtocolStatusTypeDef protocolStatus;
-
-//	txData[0] = 0x11;
-//	txData[1] = 0x22;
-//	txData[2] = 0x33;
-//	txData[3] = 0x44;
-//	txData[4] = 0x55;
-//	txData[5] = 0x66;
-//	txData[6] = 10;
-//	txData[7] = 10 >> 8;
-//	uint32_t errorS = 0;
-
-	for (;;) {
-		char *data = pvPortMalloc(100); //Malloc 100 char array
-		HAL_ADC_Start(&hadc1);
-		HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
-		uint32_t raw = HAL_ADC_GetValue(&hadc1);
-
-		HAL_ADC_Start(&hadc2);
-		HAL_ADC_PollForConversion(&hadc2, HAL_MAX_DELAY);
-		uint32_t raw1 = HAL_ADC_GetValue(&hadc2);
-
-		sprintf(data, "ADC1: %03lu\n ADC2: %03lu\n", raw, raw1);
-
-		HAL_UART_Transmit(&huart3, (uint8_t*) data, strlen(data), 100);
+		sprintf(data, "%d.%04d\n", intPart,fracToInt);
+		HAL_UART_Transmit(&huart3,(uint8_t*)data, strlen(data), 100);
 
 		HAL_FDCAN_GetProtocolStatus(&hfdcan1, &protocolStatus);
 		if (protocolStatus.BusOff) {
 			CLEAR_BIT(hfdcan1.Instance->CCCR, FDCAN_CCCR_INIT);
 		}
 
+		//DATA CALCULATION IS IN test-> travel Percent;
 		SendMotorCommand(&hfdcan1,10,0,1,0,2400);
-		SendSensorReading(&hfdcan1, raw);
+		//SendSensorReading(&hfdcan1, raw);
 
-
-
-//		if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &txHeader, txData)
-//				!= HAL_OK) //send data to CAN bus
-//				{
-//			Error_Handler();
-//		}
-//		uint32_t counter = 500;
-//        txHeader.Identifier = counter++;
-
-		HAL_GPIO_TogglePin(GPIOF, GPIO_PIN_9);
-		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
-//		char *data = pvPortMalloc(100);
-//	  sprintf(data, "%lu\n", count);
-//	  HAL_UART_Transmit(&huart3,(uint8_t*)data, strlen(data), 100);
-
-//	  if(count > 0)
-//	  {
-//		  sprintf(data, "Received ID: 0x%X\n", rxHeader.Identifier);
-//		  HAL_UART_Transmit(&huart3,(uint8_t*)data, strlen(data), 100);
-//
-//		  sprintf(data, "DLC: %d\n", rxHeader.DataLength);
-//		  HAL_UART_Transmit(&huart3,(uint8_t*)data, strlen(data), 100);
-//
-//		  sprintf(data, "Data: ");
-//		  HAL_UART_Transmit(&huart3,(uint8_t*)data, strlen(data), 100);
-//
-//		  for (uint8_t i = 0; i < 8; i++) {
-//			  sprintf(data, "0x%X ", rxData[i]);
-//			  HAL_UART_Transmit(&huart3,(uint8_t*)data, strlen(data), 100);
-//		  }
-//		  count--;
-//	  }
-//	  errorS ++;
-//	  sprintf(data, "ERRORS %d\n", errorS);
-//	  HAL_UART_Transmit(&huart3,(uint8_t*)data, strlen(data), 100);
-
-//	  sprintf(data, "Last Error Code: %d\n", protocolStatus.LastErrorCode);
-//	  HAL_UART_Transmit(&huart3,(uint8_t*)data, strlen(data), 100);
-//	  sprintf(data, "Error Passive: %d\n", protocolStatus.ErrorPassive);
-//	  HAL_UART_Transmit(&huart3,(uint8_t*)data, strlen(data), 100);
-//	  sprintf(data, "Bus Off: %d\n", protocolStatus.BusOff);
-//	  HAL_UART_Transmit(&huart3,(uint8_t*)data, strlen(data), 100);
-//	  sprintf(data, "Activity: %d\n", protocolStatus.Activity);
-//	  HAL_UART_Transmit(&huart3,(uint8_t*)data, strlen(data), 100);
 		vPortFree(data);
-
-		osDelay(10);
+		osDelay(1);
 	}
-  /* USER CODE END startCanTest */
+  /* USER CODE END startSendCAN */
 }
 
 /**
