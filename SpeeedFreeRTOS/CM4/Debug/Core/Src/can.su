@@ -1,0 +1,4 @@
+../Core/Src/can.c:3:19:CAN_SendData	64	static
+../Core/Src/can.c:21:6:SendMotorCommand	32	static
+../Core/Src/can.c:41:6:SendSensorReading01	24	static
+../Core/Src/can.c:60:6:SendSensorReading02	24	static

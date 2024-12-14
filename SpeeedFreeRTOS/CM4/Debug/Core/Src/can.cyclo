@@ -1,0 +1,4 @@
+../Core/Src/can.c:3:19:CAN_SendData	1
+../Core/Src/can.c:21:6:SendMotorCommand	2
+../Core/Src/can.c:41:6:SendSensorReading01	2
+../Core/Src/can.c:60:6:SendSensorReading02	2
